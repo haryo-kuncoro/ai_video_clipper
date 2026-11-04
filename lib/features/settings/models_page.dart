@@ -17,10 +17,34 @@ class ModelsPage extends StatefulWidget {
 }
 
 class _ModelsPageState extends State<ModelsPage> {
+  String? _shown;
+
   @override
   void initState() {
     super.initState();
+    widget.catalog.addListener(_onCatalog);
     widget.catalog.refresh();
+  }
+
+  @override
+  void dispose() {
+    widget.catalog.removeListener(_onCatalog);
+    super.dispose();
+  }
+
+  /// Pesan hasil unduh/hapus tampil sebagai SnackBar agar terlihat walau
+  /// daftar sedang di-scroll ke bawah.
+  void _onCatalog() {
+    final m = widget.catalog.message;
+    if (m == null) {
+      _shown = null;
+      return;
+    }
+    if (m == _shown || !mounted) return;
+    _shown = m;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(m)));
   }
 
   Future<void> _confirmDelete(String name, Future<void> Function() action) async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../core/errors/app_exception.dart';
@@ -146,10 +148,14 @@ class ModelCatalog extends ChangeNotifier {
     final name = TranslationLanguages.names[code] ?? code;
     _begin(translationKey(code), 'Mengunduh model terjemahan $name', null);
     try {
-      await translator.downloadModel(code);
+      await translator
+          .downloadModel(code)
+          .timeout(const Duration(minutes: 15));
       _message = 'Model terjemahan $name siap dipakai.';
     } on AppException catch (e) {
       _message = e.message;
+    } on TimeoutException {
+      _message = 'Unduhan terlalu lama. Periksa koneksi lalu coba lagi.';
     } catch (e, st) {
       AppLogger.e('Unduh model terjemahan gagal', e, st);
       _message = 'Unduhan model terjemahan gagal. Coba lagi.';
