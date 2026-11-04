@@ -1,0 +1,29 @@
+name: ai_video_clipper
+description: AI Video Clipper - aplikasi pribadi local-first untuk membuat clip portrait 9:16 dari video panjang.
+publish_to: 'none'
+version: 0.20.0+20
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffmpeg_kit_flutter_new: ^4.6.3
+  file_picker: ^13.3.2
+  flutter_secure_storage: ^11.2.0
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  shared_preferences: ^2.3.3
+  sqflite: ^2.4.1
+  sherpa_onnx: ^2.0.1
+  video_player: ^2.9.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.3.4
+
+flutter:
+  uses-material-design: true
