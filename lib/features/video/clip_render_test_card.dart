@@ -190,7 +190,7 @@ class _ClipRenderTestCardState extends State<ClipRenderTestCard> {
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Bakar subtitle dari transcript'),
+              title: const Text('Render subtitle dari transcript'),
               value: _burnSubtitles,
               onChanged: _busy ? null : (v) => setState(() => _burnSubtitles = v),
             ),

@@ -55,6 +55,24 @@ class _Backend implements PipelineBackend {
         segmentCount: 10, cancelled: transcribeCancelled || cancel.isCancelled);
   }
 
+  bool needsTranslationValue = false;
+
+  @override
+  Future<bool> needsTranslation(int projectId, String target) async =>
+      needsTranslationValue;
+
+  @override
+  Future<void> translate({
+    required int projectId,
+    required String source,
+    required String target,
+    required CancelToken cancel,
+    required void Function(double fraction, String status) onProgress,
+  }) async {
+    log.add('translate:$source>$target');
+    onProgress(0.5, 'Menerjemahkan');
+  }
+
   @override
   Future<({int found, int accepted})> detect({
     required VideoRecord video,
@@ -157,6 +175,43 @@ void main() {
       expect(pipeline.state.stage, PipelineStage.done);
       expect(pipeline.state.fraction, 1);
       expect(pipeline.isRunning, isFalse);
+    });
+
+    test('terjemahan ko -> id dijalankan setelah transkripsi', () async {
+      backend.needsTranslationValue = true;
+      final r = await pipeline.run(
+        video: video,
+        options: const PipelineOptions(language: 'ko', translateTo: 'id'),
+      );
+      expect(backend.log, [
+        'transcribe:base:ko',
+        'translate:ko>id',
+        'detect:5',
+        'render:true:true',
+      ]);
+      expect(r, isNotNull);
+      expect(pipeline.state.fraction, 1);
+    });
+
+    test('terjemahan dilewati bila sudah diterjemahkan / bahasa sama / auto',
+        () async {
+      await pipeline.run(
+        video: video,
+        options: const PipelineOptions(language: 'ko', translateTo: 'id'),
+      );
+      expect(backend.log.any((e) => e.startsWith('translate')), isFalse);
+
+      backend.log.clear();
+      backend.needsTranslationValue = true;
+      await pipeline.run(
+        video: video,
+        options: const PipelineOptions(language: 'id', translateTo: 'id'),
+      );
+      await pipeline.run(
+        video: video,
+        options: const PipelineOptions(language: '', translateTo: 'id'),
+      );
+      expect(backend.log.any((e) => e.startsWith('translate')), isFalse);
     });
 
     test('keep-alive: start di awal, stop di akhir, progres naik', () async {

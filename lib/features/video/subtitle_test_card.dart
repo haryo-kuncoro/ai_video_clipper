@@ -167,7 +167,7 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
     } on AppException catch (e) {
       if (mounted) setState(() => _message = e.message);
     } catch (e, st) {
-      AppLogger.e('Bakar subtitle gagal', e, st);
+      AppLogger.e('Render subtitle gagal', e, st);
       if (mounted) setState(() => _message = 'Proses gagal.');
     } finally {
       try {
@@ -221,7 +221,7 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
             const SizedBox(height: 12),
             FilledButton(
               onPressed: _busy ? null : _burn,
-              child: const Text('Bakar subtitle (15 detik pertama)'),
+              child: const Text('Render subtitle (15 detik pertama)'),
             ),
             if (_busy) ...[
               const SizedBox(height: 12),

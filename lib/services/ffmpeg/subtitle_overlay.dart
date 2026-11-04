@@ -4,7 +4,7 @@ const int maxSubtitleOverlays = 120;
 /// Satu gambar subtitle (PNG transparan) yang ditempel pada rentang waktu
 /// tertentu. Waktu RELATIF terhadap awal clip (0 = frame pertama clip).
 ///
-/// Subtitle dibakar lewat filter `overlay` (filter inti FFmpeg), bukan
+/// Subtitle dirender lewat filter `overlay` (filter inti FFmpeg), bukan
 /// `subtitles`/libass, sehingga tidak bergantung pada library font atau
 /// libass di build FFmpeg perangkat.
 class SubtitleOverlay {

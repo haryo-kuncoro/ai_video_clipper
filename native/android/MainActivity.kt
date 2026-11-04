@@ -92,12 +92,12 @@ class MainActivity : FlutterActivity() {
                         shareUri(uri, mime, result)
                     }
                     "keepAliveStart" -> {
-                        val title = call.argument<String>("title") ?: "AI Video Clipper"
+                        val title = call.argument<String>("title") ?: "AI CLIPPER"
                         val text = call.argument<String>("text") ?: "Memproses…"
                         keepAliveStart(title, text, result)
                     }
                     "keepAliveUpdate" -> {
-                        val title = call.argument<String>("title") ?: "AI Video Clipper"
+                        val title = call.argument<String>("title") ?: "AI CLIPPER"
                         val text = call.argument<String>("text") ?: ""
                         val progress = call.argument<Number>("progress")?.toInt() ?: -1
                         try {
@@ -137,11 +137,26 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /** Membuka sumber lewat path; bila gagal, coba lewat file descriptor. */
+    private fun openSource(retriever: MediaMetadataRetriever, path: String) {
+        try {
+            retriever.setDataSource(path)
+        } catch (first: RuntimeException) {
+            try {
+                java.io.FileInputStream(path).use { retriever.setDataSource(it.fd) }
+            } catch (second: Exception) {
+                throw InvalidVideoException(
+                    "setDataSource gagal (${first.message}) / fd (${second.message})"
+                )
+            }
+        }
+    }
+
     private fun probe(path: String?): Map<String, Any> {
         if (path.isNullOrEmpty()) throw InvalidVideoException("path kosong")
         val retriever = MediaMetadataRetriever()
         try {
-            retriever.setDataSource(path)
+            openSource(retriever, path)
 
             val hasVideo =
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) == "yes"
@@ -160,8 +175,12 @@ class MainActivity : FlutterActivity() {
             val hasAudio =
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes"
 
-            if (!hasVideo || duration == null || duration <= 0 || width <= 0 || height <= 0) {
-                throw InvalidVideoException("metadata video tidak lengkap")
+            // Sebagian perangkat tidak mengisi HAS_VIDEO dengan benar; yang menentukan
+            // adalah durasi dan resolusi yang terbaca.
+            if (duration == null || duration <= 0 || width <= 0 || height <= 0) {
+                throw InvalidVideoException(
+                    "metadata tidak lengkap: video=$hasVideo durasi=$duration ${width}x$height"
+                )
             }
 
             // Video ponsel sering disimpan landscape dengan rotasi 90/270.

@@ -168,9 +168,12 @@ class TranscriptionLanguage {
 
   static const indonesian = TranscriptionLanguage('id', 'Indonesia');
   static const english = TranscriptionLanguage('en', 'Inggris');
+  static const korean = TranscriptionLanguage('ko', 'Korea');
+  static const japanese = TranscriptionLanguage('ja', 'Jepang');
+  static const chinese = TranscriptionLanguage('zh', 'Mandarin');
   static const auto = TranscriptionLanguage('', 'Otomatis');
 
-  static const all = [indonesian, english, auto];
+  static const all = [indonesian, english, korean, japanese, chinese, auto];
 }
 
 AppException modelMissing(WhisperModelInfo model) => AppException(

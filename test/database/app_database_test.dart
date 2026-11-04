@@ -43,10 +43,10 @@ void main() {
     return r.first['c'] as int;
   }
 
-  test('database baru membuat semua tabel (versi 5)', () async {
+  test('database baru membuat semua tabel (versi 6)', () async {
     final d = await openDb();
     final info = await d.info();
-    expect(info.version, 5);
+    expect(info.version, 6);
     expect(
       info.tables,
       containsAll([
@@ -137,7 +137,7 @@ void main() {
 
     final v2 = await openDb();
     final info = await v2.info();
-    expect(info.version, 5);
+    expect(info.version, 6);
     expect(info.tables, contains('subtitle_settings'));
     final all = await ProjectRepository(v2.db).getAll();
     expect(all.map((e) => e.name), ['Project lama']);

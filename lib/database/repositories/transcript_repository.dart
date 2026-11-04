@@ -58,6 +58,33 @@ class TranscriptRepository {
     });
   }
 
+  /// Menyimpan hasil terjemahan SECARA ATOMIK: `text` diganti terjemahan,
+  /// teks asli dipindah ke `source_text` (hanya bila belum terisi).
+  Future<void> applyTranslation(
+    int transcriptId,
+    Map<int, String> translated,
+    String lang,
+  ) {
+    return _db.transaction((txn) async {
+      final batch = txn.batch();
+      translated.forEach((segmentId, text) {
+        batch.rawUpdate(
+          'UPDATE transcript_segments '
+          'SET source_text = COALESCE(source_text, text), text = ? '
+          'WHERE id = ? AND transcript_id = ?',
+          [text, segmentId, transcriptId],
+        );
+      });
+      batch.update(
+        'transcripts',
+        {'translated_lang': lang},
+        where: 'id = ?',
+        whereArgs: [transcriptId],
+      );
+      await batch.commit(noResult: true);
+    });
+  }
+
   Future<Transcript?> getByProject(int projectId) async {
     final rows = await _db.query(
       'transcripts',

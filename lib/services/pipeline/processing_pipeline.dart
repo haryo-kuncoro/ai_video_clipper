@@ -29,6 +29,7 @@ class PipelineOptions {
     this.burnSubtitles = true,
     this.faceAware = true,
     this.exportToGallery = false,
+    this.translateTo,
   });
 
   final WhisperModelInfo model;
@@ -43,6 +44,13 @@ class PipelineOptions {
   final bool burnSubtitles;
   final bool faceAware;
   final bool exportToGallery;
+
+  /// Kode bahasa tujuan terjemahan (mis. 'id'); null = tanpa terjemahan.
+  final String? translateTo;
+
+  /// Terjemahan berlaku hanya bila bahasa sumber jelas dan berbeda dari tujuan.
+  bool get translates =>
+      translateTo != null && language.isNotEmpty && language != translateTo;
 }
 
 class PipelineState {
@@ -186,10 +194,11 @@ class ProcessingPipeline extends ChangeNotifier {
 
       // Bobot tiap tahap; dinormalisasi terhadap tahap yang benar-benar jalan.
       final wTranscribe = needTranscript ? 0.55 : 0.0;
+      final wTranslate = options.translates ? 0.08 : 0.0;
       const wDetect = 0.05;
       const wRender = 0.35;
       final wExport = doExport ? 0.05 : 0.0;
-      final total = wTranscribe + wDetect + wRender + wExport;
+      final total = wTranscribe + wTranslate + wDetect + wRender + wExport;
       double overall(double before, double weight, double f) =>
           ((before + weight * f.clamp(0.0, 1.0)) / total).clamp(0.0, 1.0);
 
@@ -212,8 +221,27 @@ class ProcessingPipeline extends ChangeNotifier {
         reused = true;
       }
 
+      // 1b. Terjemahan (opsional) — offline di perangkat
+      if (options.translates &&
+          await _backend.needsTranslation(projectId, options.translateTo!)) {
+        _set(PipelineStage.transcribing, projectId,
+            overall(wTranscribe, 0, 0), 'Menerjemahkan');
+        await _backend.translate(
+          projectId: projectId,
+          source: options.language,
+          target: options.translateTo!,
+          cancel: cancel,
+          onProgress: (f, status) => _set(PipelineStage.transcribing,
+              projectId, overall(wTranscribe, wTranslate, f), status),
+        );
+        if (cancel.isCancelled) {
+          return await _finishCancelled(projectId, result());
+        }
+      }
+
       // 2. Deteksi + terima kandidat teratas
-      _set(PipelineStage.detecting, projectId, overall(wTranscribe, 0, 0),
+      _set(PipelineStage.detecting, projectId,
+          overall(wTranscribe, wTranslate, 0),
           'Mencari momen terbaik');
       final det = await _backend.detect(
         video: video,
@@ -233,7 +261,7 @@ class ProcessingPipeline extends ChangeNotifier {
 
       // 3. Render
       final before = doExport ? await _backend.clipIds(projectId) : <int>{};
-      final renderStart = wTranscribe + wDetect;
+      final renderStart = wTranscribe + wTranslate + wDetect;
       _set(PipelineStage.rendering, projectId, overall(renderStart, 0, 0),
           'Merender clip');
       final summary = await _backend.render(

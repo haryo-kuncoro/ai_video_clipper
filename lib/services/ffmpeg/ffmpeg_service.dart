@@ -17,7 +17,7 @@ class FFmpegDiagnostics {
   final bool hasLibx264;
   final bool hasAac;
 
-  /// Filter `subtitles` (libass), dipakai untuk membakar subtitle (STEP 8).
+  /// Filter `subtitles` (libass), dipakai untuk merender subtitle (STEP 8).
   final bool hasSubtitlesFilter;
   final bool hasDrawtextFilter;
 }
@@ -205,7 +205,7 @@ class FFmpegService {
     ));
   }
 
-  /// Membakar subtitle ke video. [overlays] berasal dari SubtitleRenderer dan
+  /// Merender subtitle ke video. [overlays] berasal dari SubtitleRenderer dan
   /// berwaktu relatif terhadap awal rentang. Bila [plan] diisi, crop+scale
   /// portrait dilakukan dalam encode yang sama; bila [startMs]/[endMs] diisi,
   /// hanya rentang itu yang diproses.
@@ -239,7 +239,7 @@ class FFmpegService {
 
     return _queue.enqueue(FFmpegTask(
       id: taskId ?? _nextId('subtitle'),
-      label: 'Bakar subtitle',
+      label: 'Render subtitle',
       args: FFmpegCommands.burnSubtitles(
         input: inputPath,
         output: outputPath,

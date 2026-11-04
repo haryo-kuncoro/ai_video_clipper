@@ -4,6 +4,7 @@ import 'migration_v2.dart';
 import 'migration_v3.dart';
 import 'migration_v4.dart';
 import 'migration_v5.dart';
+import 'migration_v6.dart';
 
 /// Daftar semua migrasi, berurutan. Tambahkan migrasi baru di akhir.
 const List<Migration> allMigrations = [
@@ -12,4 +13,5 @@ const List<Migration> allMigrations = [
   MigrationV3(),
   MigrationV4(),
   MigrationV5(),
+  MigrationV6(),
 ];

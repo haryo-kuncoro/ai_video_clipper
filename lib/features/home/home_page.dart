@@ -91,7 +91,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 24),
             Center(
               child: Text(
-                'v${AppConstants.appVersion} - STEP 20 Pengaturan',
+                'v${AppConstants.appVersion}',
                 style: theme.textTheme.bodySmall,
               ),
             ),

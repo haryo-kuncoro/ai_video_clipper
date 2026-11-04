@@ -170,7 +170,7 @@ class FFmpegCommands {
     ];
   }
 
-  /// Membakar subtitle (gambar PNG dari SubtitleRenderer) ke video dalam SATU
+  /// Merender subtitle (gambar PNG dari SubtitleRenderer) ke video dalam SATU
   /// kali encode, opsional sekaligus crop+scale portrait dan memotong rentang
   /// [startMs]..[endMs]. Waktu pada [overlays] relatif terhadap awal rentang.
   ///

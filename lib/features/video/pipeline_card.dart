@@ -33,8 +33,12 @@ class _PipelineCardState extends State<PipelineCard> {
   bool _burn = true;
   late bool _face = widget.settings.faceAwareCropEnabled;
   bool _export = false;
+  bool _translate = false;
   double _top = 5;
   String? _message;
+
+  bool get _canTranslate =>
+      _language.code.isNotEmpty && _language.code != 'id';
 
   Future<void> _start() async {
     setState(() => _message = null);
@@ -50,6 +54,7 @@ class _PipelineCardState extends State<PipelineCard> {
           burnSubtitles: _burn,
           faceAware: _face,
           exportToGallery: _export,
+          translateTo: _canTranslate && _translate ? 'id' : null,
         ),
       );
     } on AppException catch (e) {
@@ -196,6 +201,16 @@ class _PipelineCardState extends State<PipelineCard> {
             ),
           ],
         ),
+        if (_canTranslate)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Terjemahkan ke Indonesia'),
+            subtitle: const Text(
+                'Subtitle dan deteksi clip memakai terjemahan. Berjalan offline '
+                'di HP; model terjemahan diunduh sekali (±30 MB per bahasa).'),
+            value: _translate,
+            onChanged: (v) => setState(() => _translate = v),
+          ),
         Text('Jumlah clip yang dirender: ${_top.round()}'),
         Slider(
           value: _top,
@@ -214,7 +229,7 @@ class _PipelineCardState extends State<PipelineCard> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Bakar subtitle'),
+          title: const Text('Render subtitle'),
           value: _burn,
           onChanged: (v) => setState(() => _burn = v),
         ),

@@ -263,7 +263,7 @@ void main() {
     expect(jobs.every((j) => j.status == JobStatus.completed), isTrue);
   });
 
-  test('transcript tersedia -> subtitle dibakar (overlay PNG), folder dibersihkan',
+  test('transcript tersedia -> subtitle dirender (overlay PNG), folder dibersihkan',
       () async {
     await addCandidates([(0, CandidateStatus.accepted)]);
     await addTranscript([

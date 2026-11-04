@@ -7,6 +7,7 @@ class Transcript {
     required this.videoId,
     this.language,
     this.engine,
+    this.translatedLang,
     required this.createdAt,
   });
 
@@ -15,6 +16,9 @@ class Transcript {
   final int videoId;
   final String? language;
   final String? engine;
+
+  /// Kode bahasa hasil terjemahan (null = belum diterjemahkan).
+  final String? translatedLang;
   final DateTime createdAt;
 
   factory Transcript.fromMap(Map<String, Object?> m) => Transcript(
@@ -23,6 +27,7 @@ class Transcript {
         videoId: m['video_id'] as int,
         language: m['language'] as String?,
         engine: m['engine'] as String?,
+        translatedLang: m['translated_lang'] as String?,
         createdAt: fromEpochMs(m['created_at'] as int),
       );
 
@@ -43,6 +48,7 @@ class TranscriptSegment {
     required this.startMs,
     required this.endMs,
     required this.text,
+    this.sourceText,
   });
 
   final int? id;
@@ -50,6 +56,9 @@ class TranscriptSegment {
   final int startMs;
   final int endMs;
   final String text;
+
+  /// Teks asli sebelum diterjemahkan (null bila tidak diterjemahkan).
+  final String? sourceText;
 
   Duration get start => Duration(milliseconds: startMs);
   Duration get end => Duration(milliseconds: endMs);
@@ -61,5 +70,6 @@ class TranscriptSegment {
         startMs: m['start_ms'] as int,
         endMs: m['end_ms'] as int,
         text: m['text'] as String,
+        sourceText: m['source_text'] as String?,
       );
 }

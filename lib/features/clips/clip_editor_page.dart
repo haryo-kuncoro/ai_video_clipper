@@ -350,7 +350,7 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
                   Text('Subtitle', style: theme.textTheme.titleSmall),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Bakar subtitle dari transcript'),
+                    title: const Text('Render subtitle dari transcript'),
                     value: _edit.burnSubtitles,
                     onChanged: _busy
                         ? null

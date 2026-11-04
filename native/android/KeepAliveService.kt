@@ -84,7 +84,7 @@ class KeepAliveService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val title = intent?.getStringExtra(EXTRA_TITLE) ?: "AI Video Clipper"
+        val title = intent?.getStringExtra(EXTRA_TITLE) ?: "AI CLIPPER"
         val text = intent?.getStringExtra(EXTRA_TEXT) ?: "Memproses…"
         val notification = build(this, title, text, -1)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

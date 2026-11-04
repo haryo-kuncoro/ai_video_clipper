@@ -10,6 +10,8 @@ import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/constants/app_constants.dart';
 import 'database/repositories/app_settings_repository.dart';
+import 'services/translation/mlkit_text_translator.dart';
+import 'services/translation/translation_service.dart';
 import 'services/auth/auth_service.dart';
 import 'services/auth/secure_store.dart';
 import 'services/settings/app_settings.dart';
@@ -165,6 +167,10 @@ Future<void> main() async {
               detection: detectionService,
               render: renderService,
               export: exportSvc,
+              translation: TranslationService(
+                translator: MlKitTextTranslator(),
+                transcripts: transcriptRepo,
+              ),
             ),
             keepAlive: NativeKeepAlive(),
           ),
