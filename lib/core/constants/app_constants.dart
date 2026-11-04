@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const appName = 'AI Video Clipper';
+  static const appName = 'AI CLIPPER';
   static const appVersion = '0.20.0';
 
   /// Nomor build (angka setelah + di pubspec.yaml); dikirim ke server.

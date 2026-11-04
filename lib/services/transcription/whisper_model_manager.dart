@@ -45,10 +45,14 @@ class WhisperModelManager {
   WhisperModelManager(
     this.modelsDir, {
     this.vadUrl = WhisperModels.vadUrl,
+    this.validateContent = true,
   });
 
   final Directory modelsDir;
   final String vadUrl;
+
+  /// Periksa isi file (dimatikan hanya pada test dengan file palsu).
+  final bool validateContent;
 
   static const vadFileName = 'silero_vad.onnx';
 
@@ -70,7 +74,53 @@ class WhisperModelManager {
     ];
   }
 
-  Future<bool> _ready(File f) async => await f.exists() && await f.length() > 0;
+  Future<bool> _ready(File f) async =>
+      await f.exists() && await f.length() > 0 && await _looksValid(f.path, f);
+
+  /// Pemeriksaan ringan agar file rusak tidak sampai ke kode native
+  /// (sherpa-onnx menghentikan aplikasi bila tokens/model tidak valid).
+  Future<bool> _looksValid(String name, File f) async {
+    if (!validateContent) return f.exists();
+    try {
+      final len = await f.length();
+      if (len == 0) return false;
+      final raf = await f.open();
+      List<int> head;
+      try {
+        head = await raf.read(len < 4096 ? len : 4096);
+      } finally {
+        await raf.close();
+      }
+      if (head.length >= 2 && head[0] == 0x1f && head[1] == 0x8b) return false;
+      if (head.isNotEmpty && (head[0] == 0x3c || head[0] == 0x7b)) {
+        return false; // HTML / JSON (halaman error)
+      }
+      if (name.endsWith('tokens.txt')) {
+        // Teks murni: setiap baris "token id".
+        for (final b in head) {
+          if (b == 0) return false;
+        }
+        final text = String.fromCharCodes(head.where((b) => b < 128));
+        return RegExp(r'\s\d+\s*$', multiLine: true).hasMatch(text) &&
+            len > 1000;
+      }
+      if (name.endsWith('.onnx')) return len > 100000;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Hapus file model yang rusak agar bisa diunduh ulang.
+  Future<void> purgeInvalid(WhisperModelInfo m) async {
+    for (final i in _items(m)) {
+      if (await i.file.exists() && !await _ready(i.file)) {
+        try {
+          await i.file.delete();
+        } catch (_) {}
+      }
+    }
+  }
 
   Future<bool> isInstalled(WhisperModelInfo m) async {
     for (final i in _items(m)) {
@@ -126,6 +176,7 @@ class WhisperModelManager {
       throw StorageException('Folder model tidak dapat dibuat.', cause: e);
     }
 
+    await purgeInvalid(m);
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       if (await _ready(item.file)) continue;
@@ -155,6 +206,9 @@ class WhisperModelManager {
 
     try {
       final request = await client.getUrl(Uri.parse(item.url));
+      // Minta file apa adanya. Tanpa ini server dapat mengirim gzip dan
+      // file tersimpan terkompresi (menyebabkan sherpa-onnx crash).
+      request.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
       final response = await request.close();
       if (response.statusCode != 200) {
         await response.drain<void>();
@@ -170,7 +224,13 @@ class WhisperModelManager {
       final watch = Stopwatch()..start();
       var lastReport = -1000;
 
-      await for (final chunk in response.timeout(const Duration(seconds: 30))) {
+      final gz = (response.headers.value(HttpHeaders.contentEncodingHeader) ?? '')
+          .toLowerCase()
+          .contains('gzip');
+      final Stream<List<int>> body =
+          gz ? response.cast<List<int>>().transform(gzip.decoder) : response;
+
+      await for (final chunk in body.timeout(const Duration(seconds: 30))) {
         if (cancel?.isCancelled ?? false) throw const TranscriptionCancelled();
         sink.add(chunk);
         received += chunk.length;
@@ -190,7 +250,7 @@ class WhisperModelManager {
       await sink.close();
       sink = null;
 
-      if (total != null && received != total) {
+      if (!gz && total != null && received != total) {
         throw const AppException(
           'Unduhan tidak lengkap. Coba lagi.',
           code: 'model_incomplete',
@@ -200,6 +260,12 @@ class WhisperModelManager {
         throw const AppException('File model kosong.', code: 'model_empty');
       }
 
+      if (!await _looksValid(item.name, part)) {
+        throw const AppException(
+          'File model rusak atau bukan format yang benar. Coba unduh ulang.',
+          code: 'model_corrupt',
+        );
+      }
       if (await item.file.exists()) await item.file.delete();
       await part.rename(item.file.path);
       finished = true;

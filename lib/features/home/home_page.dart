@@ -34,7 +34,7 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI VIDEO CLIPPER'),
+        title: const Text('AI CLIPPER'),
         actions: [
           IconButton(
             tooltip: 'Pengaturan',

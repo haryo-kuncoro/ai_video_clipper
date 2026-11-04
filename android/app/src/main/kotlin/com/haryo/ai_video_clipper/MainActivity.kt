@@ -92,12 +92,12 @@ class MainActivity : FlutterActivity() {
                         shareUri(uri, mime, result)
                     }
                     "keepAliveStart" -> {
-                        val title = call.argument<String>("title") ?: "AI Video Clipper"
+                        val title = call.argument<String>("title") ?: "AI CLIPPER"
                         val text = call.argument<String>("text") ?: "Memproses…"
                         keepAliveStart(title, text, result)
                     }
                     "keepAliveUpdate" -> {
-                        val title = call.argument<String>("title") ?: "AI Video Clipper"
+                        val title = call.argument<String>("title") ?: "AI CLIPPER"
                         val text = call.argument<String>("text") ?: ""
                         val progress = call.argument<Number>("progress")?.toInt() ?: -1
                         try {

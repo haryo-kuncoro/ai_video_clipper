@@ -43,7 +43,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('AI VIDEO CLIPPER'), findsOneWidget);
+    expect(find.text('AI CLIPPER'), findsOneWidget);
     expect(find.text('PROJECT BARU'), findsOneWidget);
     expect(find.text('Folder lokal siap'), findsOneWidget);
   });

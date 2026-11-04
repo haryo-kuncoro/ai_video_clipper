@@ -182,6 +182,7 @@ void main() {
       manager = WhisperModelManager(
         Directory(p.join(tmp.path, 'models')),
         vadUrl: '$base/silero_vad.onnx',
+        validateContent: false,
       );
     });
 
@@ -223,6 +224,20 @@ void main() {
           .listSync()
           .where((e) => e.path.endsWith('.part'));
       expect(leftovers, isEmpty);
+    });
+
+    test('file gzip/HTML dianggap rusak, dihapus, tidak dipakai', () async {
+      final strict = WhisperModelManager(
+        Directory(p.join(tmp.path, 'strict')),
+        vadUrl: 'http://127.0.0.1:${server.port}/v.onnx',
+      );
+      final dir = strict.modelDir(model)..createSync(recursive: true);
+      File(p.join(dir.path, model.tokensName))
+          .writeAsBytesSync([0x1f, 0x8b, 8, 0, 1, 2, 3]);
+      expect(await strict.isInstalled(model), isFalse);
+      await expectLater(strict.resolve(model), throwsA(isA<AppException>()));
+      await strict.purgeInvalid(model);
+      expect(File(p.join(dir.path, model.tokensName)).existsSync(), isFalse);
     });
 
     test('dibatalkan sebelum mulai', () async {
@@ -277,7 +292,8 @@ void main() {
 
       runner = _Runner();
       engine = _Engine();
-      manager = WhisperModelManager(Directory(p.join(tmp.path, 'models')));
+      manager = WhisperModelManager(Directory(p.join(tmp.path, 'models')),
+          validateContent: false);
       // Pasang model palsu langsung ke disk.
       final dir = manager.modelDir(model)..createSync(recursive: true);
       for (final n in [model.encoderName, model.decoderName, model.tokensName]) {

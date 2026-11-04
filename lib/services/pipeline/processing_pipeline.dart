@@ -128,7 +128,7 @@ class ProcessingPipeline extends ChangeNotifier {
   int _lastNotified = -1;
   String _lastLabel = '';
 
-  static const _title = 'AI Video Clipper';
+  static const _title = 'AI CLIPPER';
 
   /// Meminta pembatalan; proses berhenti di titik aman berikutnya.
   void cancel() => _cancel?.cancel();

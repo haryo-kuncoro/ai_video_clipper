@@ -1,3 +1,4 @@
+import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/errors/app_exception.dart';
@@ -54,6 +55,66 @@ class NativeMediaProbe implements MediaProbe {
 
   @override
   Future<VideoMetadata> probe(String path) async {
+    try {
+      return await _nativeProbe(path);
+    } on AppException catch (e) {
+      if (e.code != 'invalid_video') rethrow;
+      // MediaMetadataRetriever kadang menolak file yang sebenarnya valid
+      // (mis. HEVC/10-bit atau file dari kartu SD). Coba FFprobe.
+      final alt = await _ffprobe(path);
+      if (alt != null) {
+        AppLogger.i('Probe native ditolak, FFprobe berhasil: $path');
+        return alt;
+      }
+      rethrow;
+    }
+  }
+
+  Future<VideoMetadata?> _ffprobe(String path) async {
+    try {
+      final session = await FFprobeKit.getMediaInformation(path);
+      final info = session.getMediaInformation();
+      if (info == null) return null;
+      final seconds = double.tryParse(info.getDuration() ?? '') ?? 0;
+      var w = 0, h = 0, rot = 0;
+      var hasAudio = false;
+      for (final st in info.getStreams()) {
+        final type = st.getType();
+        if (type == 'video' && w == 0) {
+          w = st.getWidth() ?? 0;
+          h = st.getHeight() ?? 0;
+          final props = st.getAllProperties() ?? const {};
+          final tags = props['tags'];
+          final r = tags is Map ? tags['rotate'] : null;
+          rot = int.tryParse('${r ?? ''}') ?? 0;
+          final side = props['side_data_list'];
+          if (rot == 0 && side is List) {
+            for (final e in side) {
+              if (e is Map && e['rotation'] != null) {
+                rot = (num.tryParse('${e['rotation']}') ?? 0).toInt();
+              }
+            }
+          }
+        } else if (type == 'audio') {
+          hasAudio = true;
+        }
+      }
+      final ms = (seconds * 1000).round();
+      if (ms <= 0 || w <= 0 || h <= 0) return null;
+      final swap = rot.abs() % 180 == 90;
+      return VideoMetadata(
+        durationMs: ms,
+        width: swap ? h : w,
+        height: swap ? w : h,
+        hasAudio: hasAudio,
+      );
+    } catch (e) {
+      AppLogger.e('FFprobe gagal', e);
+      return null;
+    }
+  }
+
+  Future<VideoMetadata> _nativeProbe(String path) async {
     try {
       final map = await _channel
           .invokeMapMethod<String, Object?>('probe', {'path': path});
