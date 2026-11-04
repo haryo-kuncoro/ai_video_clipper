@@ -204,20 +204,25 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         if (video != null && widget.controller.ffmpeg != null) ...[
           const SizedBox(height: 12),
           if (widget.controller.pipeline != null &&
+              widget.controller.models != null &&
               widget.controller.settings.autoPipelineEnabled) ...[
             PipelineCard(
               key: ValueKey('pipeline-${video.id}'),
               pipeline: widget.controller.pipeline!,
               video: video,
               settings: widget.controller.settings,
+              catalog: widget.controller.models!,
+              subtitleSettings: widget.controller.subtitleSettings,
             ),
             const SizedBox(height: 12),
           ],
-          if (widget.controller.transcription != null) ...[
+          if (widget.controller.transcription != null &&
+              widget.controller.models != null) ...[
             TranscriptionTestCard(
               key: ValueKey('stt-${video.id}'),
               service: widget.controller.transcription!,
               video: video,
+              catalog: widget.controller.models!,
             ),
             const SizedBox(height: 12),
           ],
@@ -256,7 +261,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           Card(
             child: ExpansionTile(
               title: const Text('Alat uji teknis (STEP 6-8)'),
-              subtitle: const Text('FFmpeg, portrait, dan subtitle'),
+              subtitle: const Text('Pratinjau & gaya default subtitle, FFmpeg, portrait'),
               childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
               children: [
                 PortraitConverterCard(

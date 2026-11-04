@@ -52,6 +52,7 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
 
   SubtitleStyle _style = SubtitlePresets.style(SubtitlePreset.classic);
   bool _loaded = false;
+  bool _projectOwn = false;
 
   bool _busy = false;
   String _phase = '';
@@ -68,10 +69,12 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
 
   Future<void> _loadStyle() async {
     try {
-      final s = await widget.settings.getForProject(widget.video.projectId);
+      final s = await widget.settings.getDefault();
+      final own = await widget.settings.hasProjectStyle(widget.video.projectId);
       if (!mounted) return;
       setState(() {
         _style = s;
+        _projectOwn = own;
         _loaded = true;
       });
     } catch (e, st) {
@@ -92,6 +95,32 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
     ];
   }
 
+  Future<void> _saveDefault() async {
+    try {
+      await widget.settings.saveDefault(_style);
+      if (!mounted) return;
+      setState(() => _message =
+          'Disimpan sebagai gaya default. Semua render berikutnya '
+          '(proses otomatis, clip) memakai gaya ini.');
+    } catch (e, st) {
+      AppLogger.e('Gagal menyimpan gaya default', e, st);
+      if (mounted) setState(() => _message = 'Gaya default gagal disimpan.');
+    }
+  }
+
+  Future<void> _useDefaultForProject() async {
+    try {
+      await widget.settings.clearForProject(widget.video.projectId);
+      if (!mounted) return;
+      setState(() {
+        _projectOwn = false;
+        _message = 'Project ini kini mengikuti gaya default.';
+      });
+    } catch (e, st) {
+      AppLogger.e('Gagal menghapus gaya project', e, st);
+    }
+  }
+
   Future<void> _burn() async {
     if (_busy) return;
     setState(() {
@@ -105,7 +134,6 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
     final subsDir = Directory(p.join(widget.workDir.path, 'subs'));
     try {
       final video = widget.video;
-      await widget.settings.saveForProject(video.projectId, _style);
 
       final plan = planPortrait(
         sourceWidth: video.width,
@@ -208,8 +236,8 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
             Text('Subtitle', style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'Alat uji sementara dengan teks contoh. Gaya disimpan di '
-              'SQLite per project.',
+              'Atur gaya subtitle, lihat pratinjau dengan teks contoh, lalu '
+              'simpan sebagai GAYA DEFAULT yang dipakai semua render.',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -221,8 +249,37 @@ class _SubtitleTestCardState extends State<SubtitleTestCard> {
             const SizedBox(height: 12),
             FilledButton(
               onPressed: _busy ? null : _burn,
-              child: const Text('Render subtitle (15 detik pertama)'),
+              child: const Text('Pratinjau (render 15 detik pertama)'),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: _busy ? null : _saveDefault,
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text('Simpan sebagai default'),
+                ),
+                TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() =>
+                          _style = SubtitlePresets.style(SubtitlePreset.classic)),
+                  child: const Text('Reset ke Classic'),
+                ),
+              ],
+            ),
+            if (_projectOwn) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Project ini memakai gaya sendiri yang menimpa default.',
+                style: theme.textTheme.bodySmall,
+              ),
+              TextButton(
+                onPressed: _busy ? null : _useDefaultForProject,
+                child: const Text('Pakai gaya default untuk project ini'),
+              ),
+            ],
             if (_busy) ...[
               const SizedBox(height: 12),
               LinearProgressIndicator(value: _progress),

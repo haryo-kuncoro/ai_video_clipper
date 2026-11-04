@@ -10,6 +10,7 @@ import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/constants/app_constants.dart';
 import 'database/repositories/app_settings_repository.dart';
+import 'services/models/model_catalog.dart';
 import 'services/translation/mlkit_text_translator.dart';
 import 'services/translation/translation_service.dart';
 import 'services/auth/auth_service.dart';
@@ -106,6 +107,7 @@ Future<void> main() async {
 
 
     ProjectsController? projects;
+    ModelCatalog? modelCatalog;
     if (database != null && paths != null) {
       try {
         final cacheDir = await getTemporaryDirectory();
@@ -152,6 +154,11 @@ Future<void> main() async {
           transcripts: transcriptRepo,
           paths: paths,
         );
+        final translator = MlKitTextTranslator();
+        modelCatalog = ModelCatalog(
+          whisper: transcriptionService.models,
+          translator: translator,
+        );
         projects = ProjectsController(
           database.db,
           paths,
@@ -161,6 +168,7 @@ Future<void> main() async {
           clipRender: renderService,
           exportService: exportSvc,
           settings: currentSettings,
+          models: modelCatalog,
           pipeline: ProcessingPipeline(
             backend: ServicePipelineBackend(
               transcription: transcriptionService,
@@ -168,7 +176,7 @@ Future<void> main() async {
               render: renderService,
               export: exportSvc,
               translation: TranslationService(
-                translator: MlKitTextTranslator(),
+                translator: translator,
                 transcripts: transcriptRepo,
               ),
             ),
@@ -219,6 +227,7 @@ Future<void> main() async {
         database: database,
         databaseError: databaseError,
         projects: projects,
+        models: modelCatalog,
         remoteConfig: remoteConfig,
         storage: storage,
         auth: auth,

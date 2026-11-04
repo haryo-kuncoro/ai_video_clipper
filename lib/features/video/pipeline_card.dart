@@ -5,7 +5,12 @@ import '../../core/utils/app_logger.dart';
 import '../../database/models/video_record.dart';
 import '../../services/settings/app_settings.dart';
 import '../../services/pipeline/processing_pipeline.dart';
+import '../../database/repositories/subtitle_settings_repository.dart';
+import '../../services/models/model_catalog.dart';
+import '../../services/subtitle/subtitle_style.dart';
 import '../../services/transcription/transcription_models.dart';
+import '../settings/models_page.dart';
+import 'subtitle_style_controls.dart';
 
 /// STEP 17: "Proses otomatis" — transkripsi, deteksi, render (dan ekspor)
 /// berurutan di latar belakang. Proses terus berjalan walau halaman ditutup
@@ -15,8 +20,13 @@ class PipelineCard extends StatefulWidget {
     super.key,
     required this.pipeline,
     required this.video,
+    required this.catalog,
+    this.subtitleSettings,
     this.settings = AppSettings.defaults,
   });
+
+  final ModelCatalog catalog;
+  final SubtitleSettingsRepository? subtitleSettings;
 
   final AppSettings settings;
   final ProcessingPipeline pipeline;
@@ -37,12 +47,86 @@ class _PipelineCardState extends State<PipelineCard> {
   double _top = 5;
   String? _message;
 
+  SubtitleStyle _style = SubtitlePresets.style(SubtitlePreset.classic);
+  bool _styleDirty = false;
+  bool _styleOwn = false; // project punya gaya sendiri
+
+  @override
+  void initState() {
+    super.initState();
+    widget.catalog.refresh().then((_) {
+      if (!mounted) return;
+      final have = widget.catalog.installedWhisper;
+      if (!widget.catalog.whisperInstalled(_model) && have.isNotEmpty) {
+        setState(() => _model = have.first);
+      }
+    });
+    _loadStyle();
+  }
+
+  Future<void> _loadStyle() async {
+    final repo = widget.subtitleSettings;
+    if (repo == null) return;
+    try {
+      final id = widget.video.projectId;
+      final s = await repo.getForProject(id);
+      final own = await repo.hasProjectStyle(id);
+      if (mounted) {
+        setState(() {
+          _style = s;
+          _styleOwn = own;
+        });
+      }
+    } catch (e, st) {
+      AppLogger.e('Gagal memuat gaya subtitle', e, st);
+    }
+  }
+
+  Future<void> _makeDefault() async {
+    final repo = widget.subtitleSettings;
+    if (repo == null) return;
+    try {
+      await repo.saveDefault(_style);
+      await repo.clearForProject(widget.video.projectId);
+      if (mounted) {
+        setState(() {
+          _styleDirty = false;
+          _styleOwn = false;
+          _message = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Gaya subtitle disimpan sebagai default.')));
+      }
+    } catch (e, st) {
+      AppLogger.e('Gagal menyimpan gaya default', e, st);
+      if (mounted) setState(() => _message = 'Gaya subtitle gagal disimpan.');
+    }
+  }
+
+  String? get _missing => widget.catalog.missingMessage(
+        stt: _model,
+        sourceLang: _canTranslate && _translate ? _language.code : null,
+        targetLang: _canTranslate && _translate ? 'id' : null,
+      );
+
+  Future<void> _openModels() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ModelsPage(catalog: widget.catalog),
+    ));
+  }
+
   bool get _canTranslate =>
       _language.code.isNotEmpty && _language.code != 'id';
 
   Future<void> _start() async {
     setState(() => _message = null);
     try {
+      final repo = widget.subtitleSettings;
+      if (repo != null && _styleDirty) {
+        await repo.saveForProject(widget.video.projectId, _style);
+        _styleDirty = false;
+        _styleOwn = true;
+      }
       await widget.pipeline.run(
         video: widget.video,
         options: PipelineOptions(
@@ -68,7 +152,7 @@ class _PipelineCardState extends State<PipelineCard> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.pipeline,
+      listenable: Listenable.merge([widget.pipeline, widget.catalog]),
       builder: (context, _) {
         final theme = Theme.of(context);
         final st = widget.pipeline.state;
@@ -98,8 +182,25 @@ class _PipelineCardState extends State<PipelineCard> {
                 else ...[
                   _options(theme),
                   const SizedBox(height: 8),
+                  if (_missing != null) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(_missing!,
+                              style: theme.textTheme.bodySmall),
+                        ),
+                        TextButton(
+                          onPressed: _openModels,
+                          child: const Text('Buka'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   FilledButton.icon(
-                    onPressed: _start,
+                    onPressed: _missing == null ? _start : null,
                     icon: const Icon(Icons.auto_awesome),
                     label: const Text('Mulai proses otomatis'),
                   ),
@@ -178,7 +279,9 @@ class _PipelineCardState extends State<PipelineCard> {
           children: [
             for (final m in WhisperModels.all)
               ChoiceChip(
-                label: Text(m.label),
+                label: Text(widget.catalog.whisperInstalled(m)
+                    ? '${m.label} ✓'
+                    : m.label),
                 selected: m.id == _model.id,
                 onSelected: (_) => setState(() => _model = m),
               ),
@@ -233,6 +336,51 @@ class _PipelineCardState extends State<PipelineCard> {
           value: _burn,
           onChanged: (v) => setState(() => _burn = v),
         ),
+        if (_burn && widget.subtitleSettings != null)
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Gaya subtitle'),
+            subtitle: Text(
+              '${_style.preset.label}'
+              '${_styleOwn ? ' · khusus project ini' : ' · default'}',
+            ),
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SubtitleStyleControls(
+                style: _style,
+                onChanged: (v) => setState(() {
+                  _style = v;
+                  _styleDirty = true;
+                }),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: _makeDefault,
+                    child: const Text('Jadikan default'),
+                  ),
+                  if (_styleOwn && !_styleDirty)
+                    TextButton(
+                      onPressed: () async {
+                        final repo = widget.subtitleSettings!;
+                        await repo.clearForProject(widget.video.projectId);
+                        await _loadStyle();
+                      },
+                      child: const Text('Pakai default'),
+                    ),
+                ],
+              ),
+              Text(
+                'Perubahan berlaku untuk project ini saat proses dimulai. '
+                '"Jadikan default" membuat semua render berikutnya memakai '
+                'gaya ini. Pratinjau ada di Alat uji teknis.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Crop mengikuti wajah'),

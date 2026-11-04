@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../storage/storage_page.dart';
+import '../../services/models/model_catalog.dart';
+import 'models_page.dart';
 import '../../services/storage/storage_manager.dart';
 
 import '../../app.dart';
@@ -15,12 +17,14 @@ class SettingsPage extends StatelessWidget {
     required this.paths,
     this.auth,
     this.storage,
+    this.models,
   });
 
   final ThemeController themeController;
   final AppPaths? paths;
   final AuthService? auth;
   final StorageManager? storage;
+  final ModelCatalog? models;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +64,29 @@ class SettingsPage extends StatelessWidget {
                 );
               },
             ),
+            if (models != null) ...[
+              const SizedBox(height: 28),
+              Text('Model AI', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 12),
+              ListenableBuilder(
+                listenable: models!,
+                builder: (context, _) => Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.psychology_alt_outlined),
+                    title: const Text('Model transcript & terjemahan'),
+                    subtitle: Text(models!.busy
+                        ? models!.busyLabel
+                        : 'Unduh sekali, lalu berjalan offline'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ModelsPage(catalog: models!),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (storage != null) ...[
               const SizedBox(height: 28),
               Text('Penyimpanan', style: theme.textTheme.titleMedium),

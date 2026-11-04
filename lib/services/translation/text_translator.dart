@@ -13,6 +13,14 @@ abstract class TextTranslator {
     void Function(String status)? onStatus,
   });
 
+  /// Apakah model bahasa [code] sudah ada di perangkat.
+  Future<bool> isModelDownloaded(String code);
+
+  /// Mengunduh model bahasa [code] (lempar AppException ramah bila gagal).
+  Future<void> downloadModel(String code);
+
+  Future<void> deleteModel(String code);
+
   Future<String> translate(String source, String target, String text);
 
   Future<void> close();
@@ -21,6 +29,14 @@ abstract class TextTranslator {
 /// Bahasa yang didukung untuk terjemahan.
 abstract final class TranslationLanguages {
   static const supported = {'id', 'en', 'ko', 'ja', 'zh'};
+
+  static const names = {
+    'id': 'Indonesia',
+    'en': 'Inggris',
+    'ko': 'Korea',
+    'ja': 'Jepang',
+    'zh': 'Mandarin',
+  };
 
   static void require(String code) {
     if (!supported.contains(code)) {

@@ -8,7 +8,8 @@ import '../../database/models/video_record.dart';
 import '../../services/transcription/transcription_models.dart';
 import '../transcript/transcript_page.dart';
 import '../../services/transcription/transcription_service.dart';
-import '../../services/transcription/whisper_model_manager.dart';
+import '../../services/models/model_catalog.dart';
+import '../settings/models_page.dart';
 
 /// Kartu uji SEMENTARA untuk STEP 9: unduh model, jalankan transkripsi lokal,
 /// lihat hasilnya. Tampilan transcript lengkap dibuat di STEP 10.
@@ -17,10 +18,12 @@ class TranscriptionTestCard extends StatefulWidget {
     super.key,
     required this.service,
     required this.video,
+    required this.catalog,
   });
 
   final TranscriptionService service;
   final VideoRecord video;
+  final ModelCatalog catalog;
 
   @override
   State<TranscriptionTestCard> createState() => _TranscriptionTestCardState();
@@ -30,13 +33,6 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
   WhisperModelInfo _model = WhisperModels.defaultModel;
   TranscriptionLanguage _language = TranscriptionLanguage.indonesian;
 
-  bool _installed = false;
-  int _installedSize = 0;
-
-  bool _downloading = false;
-  DownloadProgress? _download;
-  CancelToken? _downloadCancel;
-
   bool _transcribing = false;
   TranscriptionProgress? _progress;
   CancelToken? _transcribeCancel;
@@ -45,30 +41,32 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
   int _segmentCount = 0;
   List<TranscriptSegment> _preview = const [];
 
-  WhisperModelManager get _models => widget.service.models;
+  bool get _installed => widget.catalog.whisperInstalled(_model);
 
   @override
   void initState() {
     super.initState();
-    _refreshModel();
+    widget.catalog.addListener(_onCatalog);
+    widget.catalog.refresh().then((_) => _pickInstalledModel());
     _loadExisting();
   }
 
   @override
   void dispose() {
-    _downloadCancel?.cancel();
+    widget.catalog.removeListener(_onCatalog);
     _transcribeCancel?.cancel();
     super.dispose();
   }
 
-  Future<void> _refreshModel() async {
-    final installed = await _models.isInstalled(_model);
-    final size = installed ? await _models.installedSize(_model) : 0;
-    if (!mounted) return;
-    setState(() {
-      _installed = installed;
-      _installedSize = size;
-    });
+  void _onCatalog() {
+    if (mounted) setState(() {});
+  }
+
+  /// Bila model default belum ada tetapi model lain sudah ada, pakai itu.
+  void _pickInstalledModel() {
+    if (!mounted || _installed) return;
+    final have = widget.catalog.installedWhisper;
+    if (have.isNotEmpty) setState(() => _model = have.first);
   }
 
   Future<void> _loadExisting() async {
@@ -87,43 +85,6 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
     }
   }
 
-  Future<void> _downloadModel() async {
-    if (_downloading) return;
-    final cancel = CancelToken();
-    setState(() {
-      _downloading = true;
-      _downloadCancel = cancel;
-      _download = null;
-      _message = null;
-    });
-    try {
-      await _models.download(
-        _model,
-        cancel: cancel,
-        onProgress: (d) {
-          if (mounted) setState(() => _download = d);
-        },
-      );
-      if (mounted) setState(() => _message = 'Model ${_model.label} siap.');
-    } on TranscriptionCancelled {
-      if (mounted) setState(() => _message = 'Unduhan dibatalkan.');
-    } on AppException catch (e) {
-      if (mounted) setState(() => _message = e.message);
-    } catch (e, st) {
-      AppLogger.e('Unduh model gagal', e, st);
-      if (mounted) setState(() => _message = 'Unduhan model gagal.');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _downloading = false;
-          _downloadCancel = null;
-          _download = null;
-        });
-        await _refreshModel();
-      }
-    }
-  }
-
   Future<void> _openTranscript() async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => TranscriptPage(
@@ -134,14 +95,11 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
     if (mounted) await _loadExisting();
   }
 
-  Future<void> _deleteModel() async {
-    try {
-      await _models.delete(_model);
-      if (mounted) setState(() => _message = 'Model dihapus.');
-    } on AppException catch (e) {
-      if (mounted) setState(() => _message = e.message);
-    }
-    await _refreshModel();
+  Future<void> _openModels() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ModelsPage(catalog: widget.catalog),
+    ));
+    if (mounted) _pickInstalledModel();
   }
 
   Future<void> _transcribe() async {
@@ -195,8 +153,7 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final busy = _downloading || _transcribing;
-    final d = _download;
+    final busy = _transcribing;
     final pr = _progress;
 
     return Card(
@@ -208,8 +165,8 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
             Text('Transcript (Speech-to-Text)', style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'Alat uji sementara. Model diunduh sekali; setelah itu seluruh '
-              'proses offline dan tidak ada data dikirim ke server.',
+              'Seluruh proses offline; tidak ada data dikirim ke server. '
+              'Model diunduh di Pengaturan > Model AI.',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -218,14 +175,11 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
               children: [
                 for (final m in WhisperModels.all)
                   ChoiceChip(
-                    label: Text(m.label),
+                    label: Text(widget.catalog.whisperInstalled(m)
+                        ? '${m.label} ✓'
+                        : m.label),
                     selected: m.id == _model.id,
-                    onSelected: busy
-                        ? null
-                        : (_) {
-                            setState(() => _model = m);
-                            _refreshModel();
-                          },
+                    onSelected: busy ? null : (_) => setState(() => _model = m),
                   ),
               ],
             ),
@@ -251,52 +205,24 @@ class _TranscriptionTestCardState extends State<TranscriptionTestCard> {
               ],
             ),
             const SizedBox(height: 8),
-            if (_installed)
+            if (!_installed)
               Row(
                 children: [
-                  const Icon(Icons.check_circle_outline,
-                      color: Colors.green, size: 18),
+                  const Icon(Icons.info_outline, size: 18),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Model terpasang (${formatFileSize(_installedSize)})',
+                      'Model ${_model.label} belum diunduh. Unduh dulu di '
+                      'Pengaturan > Model AI.',
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
                   TextButton(
-                    onPressed: busy ? null : _deleteModel,
-                    child: const Text('Hapus model'),
-                  ),
-                ],
-              )
-            else
-              OutlinedButton.icon(
-                icon: const Icon(Icons.download),
-                label: const Text('Unduh model'),
-                onPressed: busy ? null : _downloadModel,
-              ),
-            if (_downloading) ...[
-              const SizedBox(height: 8),
-              LinearProgressIndicator(value: d?.fileFraction),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      d == null
-                          ? 'Menghubungi server...'
-                          : 'File ${d.fileIndex + 1}/${d.fileCount}: '
-                              '${formatFileSize(d.received)}'
-                              '${d.total != null ? ' / ${formatFileSize(d.total!)}' : ''}',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => _downloadCancel?.cancel(),
-                    child: const Text('Batalkan'),
+                    onPressed: _openModels,
+                    child: const Text('Buka'),
                   ),
                 ],
               ),
-            ],
             const SizedBox(height: 12),
             FilledButton(
               onPressed: (!_installed || busy) ? null : _transcribe,

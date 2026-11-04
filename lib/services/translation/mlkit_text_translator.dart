@@ -27,6 +27,49 @@ class MlKitTextTranslator implements TextTranslator {
   }
 
   @override
+  Future<bool> isModelDownloaded(String code) async {
+    try {
+      return await _manager.isModelDownloaded(_lang(code).bcpCode);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      AppLogger.e('Cek model terjemahan gagal', e);
+      return false;
+    }
+  }
+
+  @override
+  Future<void> downloadModel(String code) async {
+    try {
+      final ok =
+          await _manager.downloadModel(_lang(code).bcpCode, isWifiRequired: false);
+      if (!ok) throw StateError('download false');
+    } on AppException {
+      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Unduh model terjemahan gagal', e, st);
+      throw const AppException(
+        'Model terjemahan belum bisa diunduh. Periksa koneksi internet '
+        'lalu coba lagi.',
+        code: 'translate_model',
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteModel(String code) async {
+    try {
+      await _manager.deleteModel(_lang(code).bcpCode);
+    } on AppException {
+      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Hapus model terjemahan gagal', e, st);
+      throw const AppException('Model terjemahan tidak dapat dihapus.',
+          code: 'translate_model_delete');
+    }
+  }
+
+  @override
   Future<void> ensureModels(
     String source,
     String target, {

@@ -248,6 +248,7 @@ class _CandidateCard extends StatelessWidget {
               if (previewing) ...[
                 const SizedBox(height: 8),
                 RangePreviewPlayer(
+                  key: ValueKey('preview-${c.id}'),
                   filePath: video.filePath,
                   startMs: c.startMs,
                   endMs: c.endMs,

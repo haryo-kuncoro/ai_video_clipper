@@ -20,3 +20,18 @@ Catatan:
 
 Instalasi: `flutter pub add google_mlkit_translation` (JANGAN timpa pubspec.yang
 sudah Anda upgrade; cukup tambah satu baris itu), lalu `flutter pub get`.
+
+## Model AI (v0.22.0)
+- Unduh/hapus model dilakukan di **Pengaturan > Model AI** (STT Tiny/Base/Small
+  dan model terjemahan per bahasa). Halaman project tidak lagi mengunduh model.
+- Tombol "Mulai proses otomatis" dan "Buat transcript" nonaktif + keterangan
+  bila model yang dibutuhkan belum ada. Untuk Korea -> Indonesia unduh:
+  model STT (disarankan Small), terjemahan Korea, dan terjemahan Indonesia.
+
+## Gaya subtitle default
+- Kartu "Proses Otomatis" > **Gaya subtitle**: atur sebelum mulai (berlaku untuk
+  project ini), atau tekan **Jadikan default** agar semua render berikutnya
+  memakai gaya itu.
+- **Alat uji teknis** > Subtitle: atur gaya, **Pratinjau** (15 detik, teks contoh),
+  lalu **Simpan sebagai default**. Pratinjau tidak lagi menyimpan gaya per project.
+- Bila sebuah project punya gaya sendiri, ada tombol "Pakai gaya default".

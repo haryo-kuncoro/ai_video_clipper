@@ -17,6 +17,7 @@ import '../../services/settings/app_settings.dart';
 import '../../services/render/clip_render_service.dart';
 import '../../services/storage/app_paths.dart';
 import '../../services/transcription/transcription_service.dart';
+import '../../services/models/model_catalog.dart';
 import '../video/video_import_service.dart';
 import 'project_deletion_service.dart';
 
@@ -33,6 +34,7 @@ class ProjectsController extends ChangeNotifier {
     this.clipRender,
     this.exportService,
     this.pipeline,
+    this.models,
     AppSettings Function()? settings,
   })  : _projects = ProjectRepository(db),
         _videos = VideoRepository(db),
@@ -62,6 +64,9 @@ class ProjectsController extends ChangeNotifier {
 
   /// Pipeline otomatis di latar belakang (null bila tidak tersedia).
   final ProcessingPipeline? pipeline;
+
+  /// Katalog model offline (STT + terjemahan).
+  final ModelCatalog? models;
   final AppSettings Function() _settings;
 
   /// Pengaturan efektif saat ini (server + fallback lokal).

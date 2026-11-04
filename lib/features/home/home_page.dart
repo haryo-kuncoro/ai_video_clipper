@@ -74,8 +74,7 @@ class HomePage extends StatelessWidget {
                   paths != null
                       ? Icons.check_circle_outline
                       : Icons.error_outline,
-                  color:
-                      paths != null ? Colors.green : theme.colorScheme.error,
+                  color: paths != null ? Colors.green : theme.colorScheme.error,
                 ),
                 title: Text(paths != null
                     ? 'Folder lokal siap'
@@ -91,7 +90,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 24),
             Center(
               child: Text(
-                'v${AppConstants.appVersion}',
+                'v${AppConstants.appVersion} - Dibuat dengan ❤️ untuk Istriku',
                 style: theme.textTheme.bodySmall,
               ),
             ),

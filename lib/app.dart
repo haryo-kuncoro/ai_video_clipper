@@ -10,6 +10,7 @@ import 'features/projects/project_detail_page.dart';
 import 'features/projects/projects_controller.dart';
 import 'features/settings/settings_page.dart';
 import 'features/account/account_page.dart';
+import 'services/models/model_catalog.dart';
 import 'services/storage/storage_manager.dart';
 import 'services/auth/auth_service.dart';
 import 'services/remote/remote_config_service.dart';
@@ -27,6 +28,7 @@ class AiVideoClipperApp extends StatelessWidget {
     this.remoteConfig,
     this.storage,
     this.auth,
+    this.models,
   });
 
   final ThemeController themeController;
@@ -38,6 +40,7 @@ class AiVideoClipperApp extends StatelessWidget {
   final RemoteConfigService? remoteConfig;
   final StorageManager? storage;
   final AuthService? auth;
+  final ModelCatalog? models;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +68,7 @@ class AiVideoClipperApp extends StatelessWidget {
                   paths: paths,
                   auth: auth,
                   storage: storage,
+                  models: models,
                 ),
             AppRoutes.account: (_) => AccountPage(
                   auth: auth!,

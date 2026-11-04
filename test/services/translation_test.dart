@@ -26,6 +26,20 @@ class _Translator implements TextTranslator {
     ensured++;
   }
 
+  final Set<String> downloaded = {};
+
+  @override
+  Future<bool> isModelDownloaded(String code) async => downloaded.contains(code);
+
+  @override
+  Future<void> downloadModel(String code) async {
+    if (failEnsure != null) throw failEnsure!;
+    downloaded.add(code);
+  }
+
+  @override
+  Future<void> deleteModel(String code) async => downloaded.remove(code);
+
   @override
   Future<String> translate(String source, String target, String text) async =>
       text == 'kosong' ? '' : '[$target] $text';

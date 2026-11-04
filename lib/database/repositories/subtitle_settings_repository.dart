@@ -38,6 +38,23 @@ class SubtitleSettingsRepository {
   Future<void> saveForProject(int projectId, SubtitleStyle style) =>
       _upsert(projectId, style);
 
+  /// True bila project punya gaya sendiri (menimpa default global).
+  Future<bool> hasProjectStyle(int projectId) async {
+    final rows = await _db.query('subtitle_settings',
+        columns: ['id'],
+        where: 'project_id = ?',
+        whereArgs: [projectId],
+        limit: 1);
+    return rows.isNotEmpty;
+  }
+
+  /// Hapus gaya khusus project agar kembali mengikuti default global.
+  Future<void> clearForProject(int projectId) => _db.delete(
+        'subtitle_settings',
+        where: 'project_id = ?',
+        whereArgs: [projectId],
+      );
+
   Future<void> saveDefault(SubtitleStyle style) => _upsert(null, style);
 
   Future<void> _upsert(int? projectId, SubtitleStyle style) {

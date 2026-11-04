@@ -29,6 +29,28 @@ class _RangePreviewPlayerState extends State<RangePreviewPlayer> {
   VideoPlayerController? _controller;
   String? _error;
   bool _ready = false;
+  bool _seeking = false;
+
+  /// Pindah ke [ms] dan TUNGGU sampai posisi benar-benar tiba. Di Android
+  /// seekTo sering selesai sebelum player berpindah; memanggil play() terlalu
+  /// cepat membuat video diputar dari awal (menit 0) untuk semua clip.
+  Future<void> _seekAndWait(int ms) async {
+    final c = _controller;
+    if (c == null || !c.value.isInitialized) return;
+    _seeking = true;
+    try {
+      for (var i = 0; i < 4; i++) {
+        await c.seekTo(Duration(milliseconds: ms));
+        for (var j = 0; j < 15; j++) {
+          final pos = c.value.position.inMilliseconds;
+          if ((pos - ms).abs() <= 1500) return;
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+      }
+    } finally {
+      _seeking = false;
+    }
+  }
 
   @override
   void initState() {
@@ -46,7 +68,7 @@ class _RangePreviewPlayerState extends State<RangePreviewPlayer> {
     _controller = c;
     try {
       await c.initialize();
-      await c.seekTo(Duration(milliseconds: widget.startMs));
+      await _seekAndWait(widget.startMs);
       c.addListener(_onTick);
       if (!mounted) return;
       setState(() => _ready = true);
@@ -60,10 +82,15 @@ class _RangePreviewPlayerState extends State<RangePreviewPlayer> {
   void _onTick() {
     final c = _controller;
     if (c == null || !c.value.isInitialized) return;
-    if (c.value.isPlaying &&
-        c.value.position.inMilliseconds >= widget.endMs) {
-      unawaited(c.pause());
-      unawaited(c.seekTo(Duration(milliseconds: widget.startMs)));
+    final pos = c.value.position.inMilliseconds;
+    if (c.value.isPlaying && !_seeking) {
+      if (pos >= widget.endMs) {
+        unawaited(c.pause());
+        unawaited(_seekAndWait(widget.startMs));
+      } else if (pos < widget.startMs - 1500) {
+        // Terlempar ke luar rentang (mis. mulai dari 0): kembalikan.
+        unawaited(_seekAndWait(widget.startMs));
+      }
     }
     if (mounted) setState(() {});
   }
@@ -76,7 +103,7 @@ class _RangePreviewPlayerState extends State<RangePreviewPlayer> {
         c.value.isInitialized &&
         (old.startMs != widget.startMs || old.endMs != widget.endMs)) {
       unawaited(c.pause());
-      unawaited(c.seekTo(Duration(milliseconds: widget.startMs)));
+      unawaited(_seekAndWait(widget.startMs));
     }
   }
 
@@ -94,10 +121,12 @@ class _RangePreviewPlayerState extends State<RangePreviewPlayer> {
       await c.pause();
       return;
     }
+    if (_seeking) return;
     final pos = c.value.position.inMilliseconds;
-    if (pos < widget.startMs || pos >= widget.endMs - 100) {
-      await c.seekTo(Duration(milliseconds: widget.startMs));
+    if (pos < widget.startMs - 300 || pos >= widget.endMs - 100) {
+      await _seekAndWait(widget.startMs);
     }
+    if (!mounted) return;
     await c.play();
   }
 
