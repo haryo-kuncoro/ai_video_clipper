@@ -186,9 +186,20 @@ class _ModelsPageState extends State<ModelsPage> {
         onPressed: disabled ? null : onDelete,
       );
     }
-    return FilledButton.tonal(
-      onPressed: disabled ? null : onDownload,
-      child: const Text('Unduh'),
+    // Tema global memberi tombol lebar tak terbatas (Size.fromHeight);
+    // di dalam ListTile itu menghabiskan lebar dan teks jadi memanjang ke
+    // bawah. Beri lebar tetap.
+    return SizedBox(
+      width: 96,
+      height: 40,
+      child: FilledButton.tonal(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(96, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+        onPressed: disabled ? null : onDownload,
+        child: const Text('Unduh'),
+      ),
     );
   }
 }
