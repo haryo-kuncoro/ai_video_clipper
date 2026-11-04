@@ -16,3 +16,9 @@
 
 Logo master 1024px: `docs/logo_ai_clipper_1024.png` (ganti dengan logo Anda sendiri
 bila ada, lalu saya buatkan ulang semua ukuran).
+
+## Ikon notifikasi (bukan kotak)
+Ikon kecil notifikasi harus monokrom. Salin juga `native/android/res/drawable/ic_stat_clipper.xml`
+ke `android/app/src/main/res/drawable/` (folder `drawable` dibuat bila belum ada) dan
+timpa `KeepAliveService.kt` dengan versi di `native/android/`. Lalu `flutter clean` dan
+`flutter run`. Notifikasi lama di status bar hilang setelah proses selesai/dibuka ulang.

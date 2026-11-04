@@ -45,7 +45,8 @@ class KeepAliveService : Service() {
             builder
                 .setContentTitle(title)
                 .setContentText(text)
-                .setSmallIcon(context.applicationInfo.icon)
+                .setSmallIcon(smallIcon(context))
+                .setColor(0xFF1E2A78.toInt())
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
             if (pending != null) builder.setContentIntent(pending)
@@ -55,6 +56,19 @@ class KeepAliveService : Service() {
                 builder.setProgress(0, 0, true)
             }
             return builder.build()
+        }
+
+        /**
+         * Ikon kecil notifikasi HARUS monokrom (putih di atas transparan).
+         * Ikon peluncur berwarna/berlatar penuh akan tampil sebagai kotak.
+         * Memakai drawable `ic_stat_clipper`; jika belum disalin, jatuh ke
+         * ikon aplikasi.
+         */
+        private fun smallIcon(context: Context): Int {
+            val id = context.resources.getIdentifier(
+                "ic_stat_clipper", "drawable", context.packageName
+            )
+            return if (id != 0) id else context.applicationInfo.icon
         }
 
         /** Memperbarui notifikasi tanpa menyentuh service (aman dari latar belakang). */
